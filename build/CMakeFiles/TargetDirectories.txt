@@ -1,0 +1,3 @@
+/Users/andreatoska/o1/build/CMakeFiles/aromaSFDL.dir
+/Users/andreatoska/o1/build/CMakeFiles/edit_cache.dir
+/Users/andreatoska/o1/build/CMakeFiles/rebuild_cache.dir

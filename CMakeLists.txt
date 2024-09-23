@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 3.7)
+project(AromaSFDL)
+
+set(CMAKE_TOOLCHAIN_FILE $ENV{DEVKITPRO}/wut/share/wut.toolchain.cmake)
+#find_package(WUT REQUIRED)
+include_directories(/opt/devkitpro/portlibs/wiiu/include/mbedtls)
+find_package(CURL REQUIRED)
+
+add_executable(aromaSFDL src/main.c)
+
+target_link_libraries(aromaSFDL
+    wut
+    ${CURL_LIBRARIES}
+    mbedtls
+    mbedx509
+    mbedcrypto
+    z
+)
+
+target_include_directories(aromaSFDL PRIVATE
+    ${CURL_INCLUDE_DIRS}
+)
+
+wut_create_rpx(aromaSFDL)
