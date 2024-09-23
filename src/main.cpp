@@ -15,7 +15,14 @@
 #include <coreinit/screen.h>
 #include <coreinit/thread.h>
 #include <vpad/input.h>
-#include <nsysnet/socket.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+
+
+#include <mocha/mocha.h>
 
 #define URL "https://cdn.abmanagement.al/0000054d"
 #define SAVE_DIR "fs:/vol/storage_mlc01/usr/boss/00050000/10176A00/user/common/data/optdat2"
@@ -33,13 +40,14 @@ int download_file(const char *url, const char *save_path) {
 
     // Create directory if it doesn't exist
     if (stat(SAVE_DIR, &st) == -1) {
+	WHBLogPrintf("[DEBUG] made directory!");
         mkdir(SAVE_DIR, 0777);
     }
 
     fp = fopen(save_path, "wb");
     if (!fp) {
         WHBLogPrintf("Error opening file for writing: %s", strerror(errno));
-        return -1;
+//        return -1;
     }
     curl = curl_easy_init();
     if (!curl) {
@@ -62,17 +70,31 @@ int download_file(const char *url, const char *save_path) {
     fclose(fp);
 
     if (res != CURLE_OK) {
-//        WHBLogPrintf("CURL error: %s", curl_easy_strerror(res));
+        WHBLogPrintf("CURL error: %s", curl_easy_strerror(res));
         return -1;
     }
 
     return 0;
 }
 
+int client_handle = 0;
+
 int main(int argc, char **argv) {
-    WHBLogConsoleInit();
     WHBProcInit();
+    WHBLogConsoleInit();
     WHBGfxInit();
+    FSAInit();
+    // this doesnt work and im too lazy to fix it so ill do it later
+//    if (Mocha_InitLibrary() != MOCHA_RESULT_SUCCESS) {
+//	return -1;
+//    }
+    Mocha_InitLibrary();
+    client_handle = FSAAddClient(NULL);
+    if (client_handle ==0) {
+	return -1;
+    }
+
+    Mocha_MountFS("storage_mlc", NULL, "/vol/storage_mlc01");
 
     WHBLogPrintf("Welcome to aromaSFDL for EU Splatoon!");
     WHBLogPrintf("Version 1.2a!");
@@ -87,7 +109,7 @@ int main(int argc, char **argv) {
     WHBLogConsoleDraw();
 
     VPADStatus vpad_data;
-    int vpad_error;
+    VPADReadError vpad_error;
     bool confirmed = false;
     bool exiting = false;
 
@@ -102,35 +124,30 @@ int main(int argc, char **argv) {
     WHBLogPrintf("Initializing network... if this crashes you have a skill issue");
     WHBLogConsoleDraw();
 
-    if (socket_lib_init() < 0) {
-        WHBLogPrintf("Failed to initialize network, did you check your network settings?");
-        WHBLogConsoleDraw();
-        goto exit;
-    }
-
     WHBLogPrintf("Downloading file...");
     WHBLogConsoleDraw();
 
     if (download_file(URL, SAVE_PATH) != 0) {
 //        WHBLogPrintf("[andreas cURL and directory handler] error! failed to download file. more info above");
         WHBLogConsoleDraw();
-        goto cleanup_network;
+        goto exit;
     }
 
     WHBLogPrintf("File downloaded successfully.");
     WHBLogConsoleDraw();
 
-cleanup_network:
-    socket_lib_finish();
 
 exit:
     WHBLogPrintf("Exiting in 10 seconds...");
     WHBLogConsoleDraw();
     sleep(10);
 
-    WHBGfxShutdown();
-//    WHBProcShutdown();
+    FSAFlushVolume(client_handle, "/vol/storage_mlc01");
+//nah id like to compile my code, thank you!
+    Mocha_UnmountFS("storage_mlc");
+    Mocha_DeInitLibrary();
     WHBLogConsoleFree();
+    WHBGfxShutdown();
     SYSLaunchMenu();
     return 0;
 }
