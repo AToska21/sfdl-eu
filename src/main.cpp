@@ -25,7 +25,7 @@
 #include <mocha/mocha.h>
 
 #define URL "https://cdn.abmanagement.al/0000054d"
-#define SAVE_DIR "fs:/vol/storage_mlc01/usr/boss/00050000/10176A00/user/common/data/optdat2"
+#define SAVE_DIR "storage_mlc01:/usr/boss/00050000/10176A00/user/common/data/optdat2"
 #define SAVE_PATH SAVE_DIR "/0000054d"
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
@@ -47,7 +47,7 @@ int download_file(const char *url, const char *save_path) {
     fp = fopen(save_path, "wb");
     if (!fp) {
         WHBLogPrintf("Error opening file for writing: %s", strerror(errno));
-//        return -1;
+        return -1;
     }
     curl = curl_easy_init();
     if (!curl) {
