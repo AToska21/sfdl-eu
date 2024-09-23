@@ -39,12 +39,12 @@ int download_file(const char *url, const char *save_path) {
     struct stat st = {0};
 
     // Create directory if it doesn't exist
-    if (stat(SAVE_DIR, &st) == -1) {
-	WHBLogPrintf("[DEBUG] made directory!");
-        mkdir(SAVE_DIR, 0777);
-    }
+//    if (stat(SAVE_DIR, &st) == -1) {
+//	WHBLogPrintf("[DEBUG] made directory!");
+//        mkdir(SAVE_DIR, 0777);
+//    }
 
-    fp = fopen(save_path, "wb");
+    fp = fopen(save_path, "w+");
     if (!fp) {
         WHBLogPrintf("Error opening file for writing: %s", strerror(errno));
         return -1;
