@@ -32,7 +32,7 @@
 #include <mocha/mocha.h>
 
 #define URL "https://cdn.abmanagement.al/0000054d"
-#define SAVE_DIR "/vol/storage_mlc01/usr/boss/00050000/10176a00/user/common/data/optdat2"
+#define SAVE_DIR "storage_mlc:/usr/boss/00050000/10176a00/user/common/data/optdat2"
 #define SAVE_PATH SAVE_DIR "/0000054d"
 
 static bool running = true;
@@ -42,6 +42,23 @@ static size_t write_data(void* ptr, size_t size, size_t nmemb, std::ofstream* st
     stream->write(static_cast<char*>(ptr), size * nmemb);
     return size * nmemb;
 }
+
+MochaUtilsStatus MountWrapper(const char* mount, const char* dev, const char* mountTo) {
+    MochaUtilsStatus res = Mocha_MountFS(mount, dev, mountTo);
+    if (res == MOCHA_RESULT_ALREADY_EXISTS) {
+        res = Mocha_MountFS(mount, nullptr, mountTo);
+    }
+    if (res == MOCHA_RESULT_SUCCESS) {
+        std::string mountPath = std::string(mount) + ":/";
+        WHBLogPrintf("Mounted %s", mountPath.c_str());
+        WHBLogConsoleDraw();
+    } else {
+        WHBLogPrintf("Failed to mount %s: %s [%d]", mount, Mocha_GetStatusStr(res), res);
+        WHBLogConsoleDraw();
+    }
+    return res;
+}
+
 
 int download_file(const std::string& url, const std::string& save_path) {
     CURL* curl;
@@ -54,6 +71,7 @@ int download_file(const std::string& url, const std::string& save_path) {
         WHBLogPrintf("Error opening file for writing: %s", std::strerror(errno));
         WHBLogConsoleDraw();
         return -1;
+        PPCHalt();
     }
 
     curl = curl_easy_init();
@@ -97,30 +115,30 @@ int main(int argc, char **argv) {
                 WHBLogConsoleInit();
                 WHBGfxInit();
                 FSAInit();
+
                 if (Mocha_InitLibrary() != MOCHA_RESULT_SUCCESS) {
-                    WHBLogPrintf("Failed to init mocha!");
+                    WHBLogPrintf("Failed to init Mocha!");
                     WHBLogConsoleDraw();
-                    sleep(10);
-                return -1;
                 }
+
                 client_handle = FSAAddClient(NULL);
-                if (client_handle ==0) {
+                if (client_handle == 0) {
+                    WHBLogPrintf("Failed to add FSA client");
+                    WHBLogConsoleDraw();
+                    sleep(999);
                     return -1;
                 }
 
-                Mocha_MountFS("storage_mlc", NULL, "/vol/sfdl_storage");
-                if (Mocha_MountFS("storage_mlc", NULL, "/vol/sfdl_storage") == MOCHA_RESULT_ALREADY_EXISTS)
-                {
-                   WHBLogPrintf("MOCHA MOUNT ERROR: already mounted");
-                }
-                if (Mocha_MountFS("storage_mlc", NULL, "/vol/sfdl_storage") == MOCHA_RESULT_SUCCESS)
-                {
-                    WHBLogPrintf("mount success!");
-                }
-                else
-                {
-                    WHBLogPrintf("Failed to mount! Reason: %s", Mocha_GetStatusStr(Mocha_MountFS ("storage_mlc", NULL, "/vol/sfdl_storage")));
-                }
+                // // Use MountWrapper instead of directly calling Mocha_MountFS
+                // if (MountWrapper("storage_mlc", NULL, "/vol/sfdl_storage") != MOCHA_RESULT_SUCCESS) {
+                //     WHBLogPrintf("Mounting failed\n");
+                //     WHBLogConsoleDraw();
+                //     sleep(999);
+                //     return -1;
+                // }WHBLogPrintf("Failed to mount! Reason: %s", Mocha_GetStatusStr(Mocha_MountFS ("storage_mlc", NULL, "/vol/sfdl_storage")));
+                // }
+
+                Mocha_MountFS ("storage_mlc", nullptr, "/vol/storage_mlc01");
 
                 WHBLogPrintf("Welcome to aromaSFDL for EU Splatoon!");
                 WHBLogPrintf("Version 1.3a!");
@@ -167,6 +185,7 @@ int main(int argc, char **argv) {
                 WHBLogConsoleDraw();
                 sleep(10);
 
+                // After operations, unmount and clean up
                 FSAFlushVolume(client_handle, "/vol/sfdl_storage");
                 Mocha_UnmountFS("sfdl_storage");
                 Mocha_DeInitLibrary();
@@ -176,8 +195,7 @@ int main(int argc, char **argv) {
                 break;
         }
         usleep(10000);
-    }
-//    SYSLaunchMenu();
     ProcUIShutdown();
     return 0;
+}
 }
